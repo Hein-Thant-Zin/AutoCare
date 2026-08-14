@@ -14,13 +14,12 @@ export default function NewVehiclePage() {
   const { addVehicle } = useVehicles()
   const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (values: VehicleFormValues) => {
+  const handleSubmit = async (values: VehicleFormValues) => {
     setLoading(true)
-    try {
-      const v = addVehicle(values)
-      router.push(`/vehicles/${v.id}`)
-    } finally {
-      setLoading(false)
+    const vehicle = await addVehicle(values)
+    setLoading(false)
+    if (vehicle) {
+      router.push(`/vehicles/${vehicle.id}`)
     }
   }
 
@@ -28,11 +27,7 @@ export default function NewVehiclePage() {
     <>
       <Header title="Add Vehicle" showBack />
       <PageShell>
-        <VehicleForm
-          onSubmit={handleSubmit}
-          loading={loading}
-          submitLabel="Add Vehicle"
-        />
+        <VehicleForm onSubmit={handleSubmit} loading={loading} submitLabel="Add Vehicle" />
       </PageShell>
       <BottomNav />
     </>

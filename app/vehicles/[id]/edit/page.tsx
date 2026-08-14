@@ -28,7 +28,7 @@ export default function EditVehiclePage() {
       <>
         <Header title="Not Found" showBack />
         <PageShell>
-          <p className="text-sm text-gray-500 text-center py-12">Vehicle not found.</p>
+          <p className="text-sm text-[#69737E] text-center py-12">Vehicle not found.</p>
         </PageShell>
         <BottomNav />
       </>
@@ -36,14 +36,11 @@ export default function EditVehiclePage() {
   }
   if (!vehicle) return null
 
-  const handleSubmit = (values: VehicleFormValues) => {
+  const handleSubmit = async (values: VehicleFormValues) => {
     setSaving(true)
-    try {
-      editVehicle(id, values)
-      router.push(`/vehicles/${id}`)
-    } finally {
-      setSaving(false)
-    }
+    await editVehicle(id, values)
+    setSaving(false)
+    router.push(`/vehicles/${id}`)
   }
 
   return (
