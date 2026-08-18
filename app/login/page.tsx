@@ -1,29 +1,11 @@
 'use client'
 
-import { signIn, useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { signIn } from 'next-auth/react'
 import Image from 'next/image'
 
 export default function LoginPage() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
-
-  // If already signed in, go to dashboard
-  useEffect(() => {
-    if (session) router.replace('/')
-  }, [session, router])
-
-  if (status === 'loading') {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-[#20252B]/20 border-t-[#20252B] rounded-full animate-spin" />
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-10">
@@ -40,13 +22,13 @@ export default function LoginPage() {
           <h1 className="text-2xl font-bold text-[#20252B] tracking-tight">
             Auto Care
           </h1>
-          <p className="text-sm text-[#69737E] mt-1.5 tracking-wide">
+          <p className="text-sm text-[#69737E] mt-1.5 tracking-wider">
             MAINTAIN · TRACK · DRIVE
           </p>
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl border border-[#E5E8EB] shadow-card p-7">
+        <div className="bg-white rounded-2xl border border-[#E5E8EB] shadow-[0_1px_3px_rgba(32,37,43,0.06)] p-7">
           <h2 className="text-base font-semibold text-[#20252B] mb-1">Sign in to continue</h2>
           <p className="text-xs text-[#69737E] mb-6 leading-relaxed">
             Your vehicles and maintenance history are securely synced to your account.
@@ -61,8 +43,7 @@ export default function LoginPage() {
           </button>
 
           <p className="text-[10px] text-[#B0B8C2] text-center mt-5 leading-relaxed">
-            By signing in you agree to store your vehicle data securely on our servers.
-            Your data is private and never shared.
+            By signing in, your data is stored securely and privately.
           </p>
         </div>
       </div>

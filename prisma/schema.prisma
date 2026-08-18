@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 // ─── NextAuth Required Models ─────────────────────────────────────────────────
@@ -66,7 +66,7 @@ model User {
 model Vehicle {
   id             String   @id @default(cuid())
   userId         String
-  type           String   // "car" | "motorcycle"
+  type           String
   brand          String
   model          String
   year           Int
@@ -75,7 +75,7 @@ model Vehicle {
   currentMileage Int
   purchaseDate   String?
   notes          String?
-  photo          String?  // base64 or URL
+  photo          String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -87,7 +87,7 @@ model MaintenanceRecord {
   id                 String   @id @default(cuid())
   userId             String
   vehicleId          String
-  date               String   // ISO date string
+  date               String
   mileage            Int
   type               String
   description        String?
