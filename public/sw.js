@@ -1,13 +1,23 @@
-const CACHE_NAME = 'autocare-v1'
+const CACHE_NAME = 'autocare-v2'
 const STATIC_ASSETS = [
-  '/',
-  '/vehicles',
-  '/maintenance',
-  '/settings',
   '/manifest.json',
 ]
 
-// Install: pre-cache static shell
+// Routes that must NEVER be intercepted by the service worker
+const BYPASS_PATTERNS = [
+  '/api/',
+  '/login',
+  '/admin',
+  '/_next/',
+  '/auth',
+]
+
+function shouldBypass(url) {
+  const { pathname } = new URL(url)
+  return BYPASS_PATTERNS.some((p) => pathname.startsWith(p))
+}
+
+// Install
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
@@ -25,37 +35,31 @@ self.addEventListener('activate', (event) => {
   self.clients.claim()
 })
 
-// Fetch: stale-while-revalidate for navigation, cache-first for assets
+// Fetch: bypass all auth/API/navigation — only cache static assets
 self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
 
-  // Skip non-GET and cross-origin
+  // Only handle GET from same origin
   if (request.method !== 'GET' || url.origin !== location.origin) return
 
-  // API routes: network-first
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(
-      fetch(request).catch(() =>
-        new Response(JSON.stringify({ error: 'Offline' }), {
-          headers: { 'Content-Type': 'application/json' },
-        })
-      )
-    )
-    return
-  }
+  // Bypass auth, API, and navigation routes entirely — let browser handle them
+  if (shouldBypass(request.url)) return
 
-  // Static assets: cache-first
+  // For navigation requests (HTML pages) — always go to network
+  if (request.mode === 'navigate') return
+
+  // Static assets only: cache-first
   event.respondWith(
     caches.match(request).then((cached) => {
-      const networkFetch = fetch(request).then((response) => {
-        if (response.ok) {
+      if (cached) return cached
+      return fetch(request).then((response) => {
+        if (response.ok && response.type === 'basic') {
           const clone = response.clone()
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone))
         }
         return response
       })
-      return cached || networkFetch
     })
   )
 })
