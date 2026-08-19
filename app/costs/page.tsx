@@ -30,7 +30,44 @@ export default function CostsPage() {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => setMounted(true), [])
-  if (!mounted || loading) return null
+
+  // Show skeleton while loading instead of blank screen
+  if (!mounted || loading) {
+    return (
+      <>
+        <Header title="Cost Tracking" />
+        <PageShell className="space-y-6">
+          {/* Stat cards skeleton */}
+          <div className="grid grid-cols-3 gap-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 text-center animate-pulse">
+                <div className="h-4 bg-gray-100 rounded w-3/4 mx-auto mb-1.5" />
+                <div className="h-3 bg-gray-100 rounded w-1/2 mx-auto" />
+              </div>
+            ))}
+          </div>
+          {/* Chart skeleton */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 animate-pulse">
+            <div className="h-3 bg-gray-100 rounded w-24 mb-4" />
+            <div className="h-40 bg-gray-50 rounded-xl" />
+          </div>
+          {/* Bar rows skeleton */}
+          <div className="space-y-2">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="bg-white rounded-xl border border-gray-100 p-3 animate-pulse">
+                <div className="flex justify-between mb-2">
+                  <div className="h-3 bg-gray-100 rounded w-1/3" />
+                  <div className="h-3 bg-gray-100 rounded w-16" />
+                </div>
+                <div className="h-1.5 bg-gray-100 rounded-full" />
+              </div>
+            ))}
+          </div>
+        </PageShell>
+        <BottomNav />
+      </>
+    )
+  }
 
   const totalCost = records.reduce((s, r) => s + r.totalCost, 0)
   const monthCost = currentMonthCost(records)
