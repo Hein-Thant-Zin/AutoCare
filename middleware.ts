@@ -16,7 +16,6 @@ export default withAuth(
   {
     callbacks: {
       authorized({ token }) {
-        // Must have a token to access any protected route
         return !!token
       },
     },
@@ -26,9 +25,16 @@ export default withAuth(
   }
 )
 
-// Protect all routes except public ones
+// Only protect app routes — exclude all static assets, API auth, and public files
 export const config = {
   matcher: [
-    '/((?!login|api/auth|_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js).*)',
+    /*
+     * Match all paths except:
+     * - _next (static files, images, HMR)
+     * - api/auth (NextAuth endpoints)
+     * - login (public login page)
+     * - Static public files (icons, manifest, sw, favicon)
+     */
+    '/((?!_next|api/auth|login|icons|manifest\\.json|sw\\.js|favicon\\.ico).*)',
   ],
 }
