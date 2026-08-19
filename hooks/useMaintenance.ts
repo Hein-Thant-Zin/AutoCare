@@ -1,60 +1,72 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback } from 'react'
+import useSWR from 'swr'
 import type { MaintenanceRecord } from '@/types'
 import type { MaintenanceFormValues } from '@/lib/validations'
 
+const fetcher = (url: string) => fetch(url).then((r) => r.json())
+
 export function useMaintenance(vehicleId?: string, adminUserId?: string) {
-  const [records, setRecords] = useState<MaintenanceRecord[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const url = adminUserId
+    ? `/api/admin/users/${adminUserId}`
+    : vehicleId
+    ? `/api/maintenance?vehicleId=${vehicleId}`
+    : '/api/maintenance'
 
-  const refresh = useCallback(async () => {
-    try {
-      setLoading(true)
-      let url: string
-      if (adminUserId) {
-        url = `/api/admin/users/${adminUserId}`
-      } else {
-        url = vehicleId ? `/api/maintenance?vehicleId=${vehicleId}` : '/api/maintenance'
-      }
-      const res = await fetch(url)
-      if (!res.ok) throw new Error('Failed to load records')
-      const data = adminUserId ? (await res.json()).maintenanceRecords : await res.json()
-      setRecords(data ?? [])
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unknown error')
-    } finally {
-      setLoading(false)
-    }
-  }, [vehicleId, adminUserId])
+  const { data, isLoading, error, mutate } = useSWR<
+    MaintenanceRecord[] | { maintenanceRecords: MaintenanceRecord[] }
+  >(url, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 5000,
+  })
 
-  useEffect(() => { refresh() }, [refresh])
+  const records: MaintenanceRecord[] = adminUserId
+    ? ((data as { maintenanceRecords: MaintenanceRecord[] })?.maintenanceRecords ?? [])
+    : ((data as MaintenanceRecord[]) ?? [])
 
-  const addRecord = useCallback(async (data: MaintenanceFormValues): Promise<MaintenanceRecord | null> => {
+  const addRecord = useCallback(async (formData: MaintenanceFormValues): Promise<MaintenanceRecord | null> => {
     try {
       const res = await fetch('/api/maintenance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(formData),
       })
-      if (!res.ok) throw new Error('Failed to create record')
+      if (!res.ok) throw new Error()
       const record: MaintenanceRecord = await res.json()
-      setRecords((prev) => [record, ...prev])
+      // Optimistically prepend to cache
+      mutate((prev: MaintenanceRecord[] | { maintenanceRecords: MaintenanceRecord[] } | undefined) => {
+        const list = (prev as MaintenanceRecord[]) ?? []
+        return [record, ...list]
+      }, false)
       return record
     } catch {
       return null
     }
-  }, [])
+  }, [mutate])
 
   const removeRecord = useCallback(async (id: string) => {
     try {
       await fetch(`/api/maintenance/${id}`, { method: 'DELETE' })
-      setRecords((prev) => prev.filter((r) => r.id !== id))
+      mutate((prev: MaintenanceRecord[] | { maintenanceRecords: MaintenanceRecord[] } | undefined) => {
+        const list = (prev as MaintenanceRecord[]) ?? []
+        return list.filter((r) => r.id !== id)
+      }, false)
     } catch {
       // ignore
     }
-  }, [])
+  }, [mutate])
 
-  return { records, loading, error, addRecord, removeRecord, refresh }
+  const refresh = useCallback(() => {
+    mutate()
+  }, [mutate])
+
+  return {
+    records,
+    loading: isLoading,
+    error: error?.message ?? null,
+    addRecord,
+    removeRecord,
+    refresh,
+  }
 }

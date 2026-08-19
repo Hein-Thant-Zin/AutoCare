@@ -1,75 +1,92 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback } from 'react'
+import useSWR, { mutate as globalMutate } from 'swr'
 import type { Vehicle } from '@/types'
 import type { VehicleFormValues } from '@/lib/validations'
 
-export function useVehicles(adminUserId?: string) {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
-  const baseUrl = adminUserId
+export function useVehicles(adminUserId?: string) {
+  const url = adminUserId
     ? `/api/admin/users/${adminUserId}`
     : '/api/vehicles'
 
-  const refresh = useCallback(async () => {
-    try {
-      setLoading(true)
-      const url = adminUserId ? `${baseUrl}` : '/api/vehicles'
-      const res = await fetch(url)
-      if (!res.ok) throw new Error('Failed to load vehicles')
-      const data = adminUserId ? (await res.json()).vehicles : await res.json()
-      setVehicles(data ?? [])
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unknown error')
-    } finally {
-      setLoading(false)
+  const { data, isLoading, error, mutate } = useSWR<Vehicle[] | { vehicles: Vehicle[] }>(
+    url,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 5000, // don't re-fetch if called within 5s
     }
-  }, [baseUrl, adminUserId])
+  )
 
-  useEffect(() => { refresh() }, [refresh])
+  const vehicles: Vehicle[] = adminUserId
+    ? ((data as { vehicles: Vehicle[] })?.vehicles ?? [])
+    : ((data as Vehicle[]) ?? [])
 
-  const addVehicle = useCallback(async (data: VehicleFormValues): Promise<Vehicle | null> => {
+  const addVehicle = useCallback(async (formData: VehicleFormValues): Promise<Vehicle | null> => {
     try {
       const res = await fetch('/api/vehicles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(formData),
       })
-      if (!res.ok) throw new Error('Failed to create vehicle')
+      if (!res.ok) throw new Error()
       const vehicle: Vehicle = await res.json()
-      setVehicles((prev) => [vehicle, ...prev])
+      // Optimistically update cache
+      mutate((prev: Vehicle[] | { vehicles: Vehicle[] } | undefined) => {
+        const list = (prev as Vehicle[]) ?? []
+        return [vehicle, ...list]
+      }, false)
       return vehicle
     } catch {
       return null
     }
-  }, [])
+  }, [mutate])
 
-  const editVehicle = useCallback(async (id: string, data: Partial<VehicleFormValues>): Promise<Vehicle | null> => {
+  const editVehicle = useCallback(async (id: string, formData: Partial<VehicleFormValues>): Promise<Vehicle | null> => {
     try {
       const res = await fetch(`/api/vehicles/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(formData),
       })
-      if (!res.ok) throw new Error('Failed to update vehicle')
+      if (!res.ok) throw new Error()
       const vehicle: Vehicle = await res.json()
-      setVehicles((prev) => prev.map((v) => (v.id === id ? vehicle : v)))
+      mutate((prev: Vehicle[] | { vehicles: Vehicle[] } | undefined) => {
+        const list = (prev as Vehicle[]) ?? []
+        return list.map((v) => (v.id === id ? vehicle : v))
+      }, false)
       return vehicle
     } catch {
       return null
     }
-  }, [])
+  }, [mutate])
 
   const removeVehicle = useCallback(async (id: string) => {
     try {
       await fetch(`/api/vehicles/${id}`, { method: 'DELETE' })
-      setVehicles((prev) => prev.filter((v) => v.id !== id))
+      mutate((prev: Vehicle[] | { vehicles: Vehicle[] } | undefined) => {
+        const list = (prev as Vehicle[]) ?? []
+        return list.filter((v) => v.id !== id)
+      }, false)
     } catch {
       // ignore
     }
-  }, [])
+  }, [mutate])
 
-  return { vehicles, loading, error, addVehicle, editVehicle, removeVehicle, refresh }
+  const refresh = useCallback(() => {
+    mutate()
+  }, [mutate])
+
+  return {
+    vehicles,
+    loading: isLoading,
+    error: error?.message ?? null,
+    addVehicle,
+    editVehicle,
+    removeVehicle,
+    refresh,
+  }
 }
