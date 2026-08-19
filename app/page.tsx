@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Plus, TrendingUp, AlertTriangle, Clock, Car } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
 import Header from '@/components/layout/Header'
+import PageSkeleton from '@/components/layout/PageSkeleton'
 import PageShell from '@/components/layout/PageShell'
 import { useVehicles } from '@/hooks/useVehicles'
 import { useMaintenance } from '@/hooks/useMaintenance'
@@ -44,7 +45,7 @@ export default function DashboardPage() {
   const monthCost = useMemo(() => currentMonthCost(records), [records])
   const recentRecords = records.slice(0, 5)
 
-  if (!mounted) return null
+  if (!mounted) return <PageSkeleton />
 
   return (
     <>

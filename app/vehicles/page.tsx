@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
 import Header from '@/components/layout/Header'
+import PageSkeleton from '@/components/layout/PageSkeleton'
 import PageShell from '@/components/layout/PageShell'
 import VehicleCard from '@/components/vehicles/VehicleCard'
 import { useVehicles } from '@/hooks/useVehicles'
@@ -16,7 +17,7 @@ export default function VehiclesPage() {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => setMounted(true), [])
-  if (!mounted) return null
+  if (!mounted) return <PageSkeleton />
 
   return (
     <>

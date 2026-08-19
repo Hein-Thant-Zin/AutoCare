@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import BottomNav from '@/components/layout/BottomNav'
 import Header from '@/components/layout/Header'
+import PageSkeleton from '@/components/layout/PageSkeleton'
 import PageShell from '@/components/layout/PageShell'
 import { useSettings } from '@/hooks/useSettings'
 import { clearAllData, exportData, importData } from '@/lib/storage'
@@ -17,7 +18,7 @@ export default function SettingsPage() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => setMounted(true), [])
-  if (!mounted) return null
+  if (!mounted) return <PageSkeleton />
 
   const handleExport = () => {
     const data = exportData()
