@@ -9,7 +9,7 @@ dotenvConfig({ path: path.join(import.meta.dirname, '.env.local') })
 const DIRECT_URL =
   process.env.DIRECT_URL ??
   process.env.DATABASE_URL ??
-  'file:./prisma/dev.db'
+  ''
 
 export default defineConfig({
   schema: path.join(import.meta.dirname, 'prisma/schema.prisma'),
