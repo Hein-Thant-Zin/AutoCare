@@ -17,7 +17,7 @@ export const vehicleSchema = z.object({
 
 export type VehicleFormValues = z.infer<typeof vehicleSchema>
 
-// ─── Maintenance Schema ───────────────────────────────────────────────────────
+// ─── Maintenance Item Schema ──────────────────────────────────────────────────
 
 export const MAINTENANCE_TYPE_VALUES = [
   'engine_oil',
@@ -36,11 +36,23 @@ export const MAINTENANCE_TYPE_VALUES = [
   'other',
 ] as const
 
+export const maintenanceItemSchema = z.object({
+  type: z.enum(MAINTENANCE_TYPE_VALUES),
+  description: z.string().optional(),
+  partsCost: z.coerce.number().min(0).default(0),
+  laborCost: z.coerce.number().min(0).default(0),
+})
+
+export type MaintenanceItemValues = z.infer<typeof maintenanceItemSchema>
+
+// ─── Maintenance Record Schema ────────────────────────────────────────────────
+
 export const maintenanceSchema = z.object({
   vehicleId: z.string().min(1, 'Vehicle is required'),
   date: z.string().min(1, 'Date is required'),
   mileage: z.coerce.number().min(0, 'Mileage must be 0 or more'),
-  type: z.enum(MAINTENANCE_TYPE_VALUES),
+  // Legacy single-item fields (kept for backwards compatibility)
+  type: z.enum(MAINTENANCE_TYPE_VALUES).optional(),
   description: z.string().optional(),
   partsReplaced: z.string().optional(),
   partsCost: z.coerce.number().min(0).default(0),
@@ -51,6 +63,8 @@ export const maintenanceSchema = z.object({
   receiptPhoto: z.string().optional(),
   nextServiceDate: z.string().optional(),
   nextServiceMileage: z.coerce.number().optional(),
+  // Multi-item line items
+  items: z.array(maintenanceItemSchema).min(1, 'At least one service item is required').optional(),
 })
 
 export type MaintenanceFormValues = z.infer<typeof maintenanceSchema>

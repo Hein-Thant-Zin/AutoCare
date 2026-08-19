@@ -3,12 +3,30 @@
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Camera } from 'lucide-react'
+import { Camera, Plus, Trash2 } from 'lucide-react'
 import { maintenanceSchema, MAINTENANCE_TYPE_VALUES, type MaintenanceFormValues } from '@/lib/validations'
 import { MAINTENANCE_TYPE_LABELS } from '@/types'
-import { cn, todayISO } from '@/lib/utils'
+import { cn, todayISO, formatCurrency } from '@/lib/utils'
 import { getWorkshops } from '@/lib/storage'
 import type { Vehicle } from '@/types'
+
+// ─── Line Item ────────────────────────────────────────────────────────────────
+
+interface LineItem {
+  type: typeof MAINTENANCE_TYPE_VALUES[number]
+  description: string
+  partsCost: number
+  laborCost: number
+}
+
+const emptyItem = (): LineItem => ({
+  type: 'engine_oil',
+  description: '',
+  partsCost: 0,
+  laborCost: 0,
+})
+
+// ─── Form ─────────────────────────────────────────────────────────────────────
 
 interface MaintenanceFormProps {
   vehicles: Vehicle[]
@@ -31,16 +49,14 @@ export default function MaintenanceForm({
 }: MaintenanceFormProps) {
   const [workshops, setWorkshops] = useState<string[]>([])
   const [receiptPreview, setReceiptPreview] = useState<string | undefined>(defaultValues?.receiptPhoto)
+  const [lineItems, setLineItems] = useState<LineItem[]>([emptyItem()])
   const fileRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    setWorkshops(getWorkshops())
-  }, [])
+  useEffect(() => { setWorkshops(getWorkshops()) }, [])
 
   const {
     register,
     handleSubmit,
-    watch,
     setValue,
     formState: { errors },
   } = useForm<MaintenanceFormValues>({
@@ -49,7 +65,6 @@ export default function MaintenanceForm({
       vehicleId: defaultVehicleId ?? vehicles[0]?.id ?? '',
       date: todayISO(),
       mileage: 0,
-      type: 'engine_oil',
       partsCost: 0,
       laborCost: 0,
       totalCost: 0,
@@ -57,14 +72,21 @@ export default function MaintenanceForm({
     },
   })
 
-  const selectedType = watch('type')
-  const partsCost = watch('partsCost') ?? 0
-  const laborCost = watch('laborCost') ?? 0
+  // Grand totals computed from line items
+  const grandParts = lineItems.reduce((s, i) => s + Number(i.partsCost || 0), 0)
+  const grandLabor = lineItems.reduce((s, i) => s + Number(i.laborCost || 0), 0)
+  const grandTotal = grandParts + grandLabor
 
-  // Auto-calculate total
-  useEffect(() => {
-    setValue('totalCost', Number(partsCost) + Number(laborCost))
-  }, [partsCost, laborCost, setValue])
+  const updateItem = <K extends keyof LineItem>(idx: number, key: K, val: LineItem[K]) => {
+    setLineItems((prev) => prev.map((item, i) => i === idx ? { ...item, [key]: val } : item))
+  }
+
+  const addItem = () => setLineItems((prev) => [...prev, emptyItem()])
+
+  const removeItem = (idx: number) => {
+    if (lineItems.length === 1) return // keep at least one
+    setLineItems((prev) => prev.filter((_, i) => i !== idx))
+  }
 
   const handleReceiptChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -78,8 +100,25 @@ export default function MaintenanceForm({
     reader.readAsDataURL(file)
   }
 
+  const handleFormSubmit = (values: MaintenanceFormValues) => {
+    onSubmit({
+      ...values,
+      partsCost: grandParts,
+      laborCost: grandLabor,
+      totalCost: grandTotal,
+      type: lineItems[0].type, // primary type from first item
+      items: lineItems.map((item) => ({
+        type: item.type,
+        description: item.description || undefined,
+        partsCost: Number(item.partsCost || 0),
+        laborCost: Number(item.laborCost || 0),
+      })),
+    })
+  }
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5">
+
       {/* Vehicle selector */}
       <Field label="Vehicle" error={errors.vehicleId?.message}>
         <select {...register('vehicleId')} className={selectCls(!!errors.vehicleId)}>
@@ -94,11 +133,7 @@ export default function MaintenanceForm({
       {/* Date & Mileage */}
       <div className="grid grid-cols-2 gap-3">
         <Field label="Date" error={errors.date?.message}>
-          <input
-            {...register('date')}
-            type="date"
-            className={inputCls(!!errors.date)}
-          />
+          <input {...register('date')} type="date" className={inputCls(!!errors.date)} />
         </Field>
         <Field label="Mileage (km)" error={errors.mileage?.message}>
           <input
@@ -111,79 +146,116 @@ export default function MaintenanceForm({
         </Field>
       </div>
 
-      {/* Maintenance type chips */}
+      {/* ── Line Items ─────────────────────────────────────────────── */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-        <div className="flex flex-wrap gap-2">
-          {MAINTENANCE_TYPE_VALUES.map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setValue('type', t)}
-              className={cn(
-                'px-3 py-1.5 rounded-full border text-xs font-medium transition-all',
-                selectedType === t
-                  ? 'bg-gray-900 text-white border-gray-900'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
-              )}
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-medium text-gray-700">Services</label>
+          <button
+            type="button"
+            onClick={addItem}
+            className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-900 transition-colors"
+          >
+            <Plus size={13} />
+            Add Service
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {lineItems.map((item, idx) => (
+            <div
+              key={idx}
+              className="border border-gray-100 rounded-xl p-3 bg-gray-50 space-y-2.5"
             >
-              {MAINTENANCE_TYPE_LABELS[t]}
-            </button>
+              {/* Header row */}
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-gray-500">
+                  Service {lineItems.length > 1 ? idx + 1 : ''}
+                </span>
+                {lineItems.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeItem(idx)}
+                    className="p-1 text-gray-300 hover:text-red-400 transition-colors rounded-lg"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                )}
+              </div>
+
+              {/* Type chips — scrollable */}
+              <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                {MAINTENANCE_TYPE_VALUES.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => updateItem(idx, 'type', t)}
+                    className={cn(
+                      'px-2.5 py-1 rounded-full border text-xs font-medium whitespace-nowrap transition-all shrink-0',
+                      item.type === t
+                        ? 'bg-gray-900 text-white border-gray-900'
+                        : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+                    )}
+                  >
+                    {MAINTENANCE_TYPE_LABELS[t]}
+                  </button>
+                ))}
+              </div>
+
+              {/* Description */}
+              <input
+                type="text"
+                value={item.description}
+                onChange={(e) => updateItem(idx, 'description', e.target.value)}
+                placeholder="Description (optional)"
+                className={inputCls(false)}
+              />
+
+              {/* Parts + Labor costs */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Parts ({currency})</label>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={item.partsCost || ''}
+                    onChange={(e) => updateItem(idx, 'partsCost', Number(e.target.value))}
+                    placeholder="0"
+                    className={inputCls(false)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Labor ({currency})</label>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={item.laborCost || ''}
+                    onChange={(e) => updateItem(idx, 'laborCost', Number(e.target.value))}
+                    placeholder="0"
+                    className={inputCls(false)}
+                  />
+                </div>
+              </div>
+
+              {/* Row subtotal */}
+              <div className="flex items-center justify-between text-xs text-gray-500 pt-0.5">
+                <span>Subtotal</span>
+                <span className="font-semibold text-gray-800">
+                  {formatCurrency(Number(item.partsCost || 0) + Number(item.laborCost || 0), currency)}
+                </span>
+              </div>
+            </div>
           ))}
         </div>
-        {errors.type && <p className="mt-1 text-xs text-red-500">{errors.type.message}</p>}
-      </div>
 
-      {/* Description */}
-      <Field label="Description (optional)" error={errors.description?.message}>
-        <input
-          {...register('description')}
-          placeholder="e.g. Changed engine oil + filter"
-          className={inputCls(!!errors.description)}
-        />
-      </Field>
-
-      {/* Parts replaced */}
-      <Field label="Parts Replaced (optional)" error={errors.partsReplaced?.message}>
-        <input
-          {...register('partsReplaced')}
-          placeholder="e.g. Oil filter, air filter"
-          className={inputCls(!!errors.partsReplaced)}
-        />
-      </Field>
-
-      {/* Costs */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Cost ({currency})
-        </label>
-        <div className="grid grid-cols-2 gap-3 mb-3">
-          <Field label="Parts" error={errors.partsCost?.message}>
-            <input
-              {...register('partsCost')}
-              type="number"
-              placeholder="0"
-              inputMode="numeric"
-              className={inputCls(!!errors.partsCost)}
-            />
-          </Field>
-          <Field label="Labor" error={errors.laborCost?.message}>
-            <input
-              {...register('laborCost')}
-              type="number"
-              placeholder="0"
-              inputMode="numeric"
-              className={inputCls(!!errors.laborCost)}
-            />
-          </Field>
-        </div>
-        <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-gray-50 border border-gray-100">
-          <span className="text-sm text-gray-500">Total</span>
-          <span className="text-base font-bold text-gray-900">
-            {(Number(partsCost) + Number(laborCost)).toLocaleString()} {currency}
-          </span>
+        {/* Grand total */}
+        <div className="mt-3 flex items-center justify-between px-4 py-3 rounded-xl bg-gray-900 text-white">
+          <div className="text-xs opacity-70">
+            Parts {formatCurrency(grandParts, currency)} · Labor {formatCurrency(grandLabor, currency)}
+          </div>
+          <div className="text-base font-bold">{formatCurrency(grandTotal, currency)}</div>
         </div>
       </div>
+      {/* ─────────────────────────────────────────────────────────── */}
 
       {/* Workshop */}
       <Field label="Workshop / Mechanic (optional)" error={errors.workshop?.message}>
@@ -195,9 +267,7 @@ export default function MaintenanceForm({
         />
         {workshops.length > 0 && (
           <datalist id="workshops-list">
-            {workshops.map((w) => (
-              <option key={w} value={w} />
-            ))}
+            {workshops.map((w) => <option key={w} value={w} />)}
           </datalist>
         )}
       </Field>
@@ -214,16 +284,10 @@ export default function MaintenanceForm({
 
       {/* Next service */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Next Service (optional)
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Next Service (optional)</label>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Date" error={errors.nextServiceDate?.message}>
-            <input
-              {...register('nextServiceDate')}
-              type="date"
-              className={inputCls(!!errors.nextServiceDate)}
-            />
+            <input {...register('nextServiceDate')} type="date" className={inputCls(!!errors.nextServiceDate)} />
           </Field>
           <Field label="Mileage (km)" error={errors.nextServiceMileage?.message}>
             <input
@@ -252,13 +316,7 @@ export default function MaintenanceForm({
               <span className="text-xs">Tap to add receipt</span>
             </div>
           )}
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleReceiptChange}
-          />
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleReceiptChange} />
         </div>
       </Field>
 
@@ -275,15 +333,7 @@ export default function MaintenanceForm({
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function Field({
-  label,
-  error,
-  children,
-}: {
-  label: string
-  error?: string
-  children: React.ReactNode
-}) {
+function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>

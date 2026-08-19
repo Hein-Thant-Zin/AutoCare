@@ -11,9 +11,9 @@ export interface Vehicle {
   licensePlate: string
   color?: string
   currentMileage: number
-  purchaseDate?: string // ISO date string
+  purchaseDate?: string
   notes?: string
-  photo?: string // base64 or URL
+  photo?: string
   createdAt: string
   updatedAt: string
 }
@@ -56,12 +56,26 @@ export const MAINTENANCE_TYPE_LABELS: Record<MaintenanceType, string> = {
   other: 'Other',
 }
 
+// ─── Line Item ───────────────────────────────────────────────────────────────
+
+export interface MaintenanceItem {
+  id: string
+  recordId: string
+  type: MaintenanceType
+  description?: string
+  partsCost: number
+  laborCost: number
+  totalCost: number
+}
+
+// ─── Maintenance Record ───────────────────────────────────────────────────────
+
 export interface MaintenanceRecord {
   id: string
   vehicleId: string
-  date: string // ISO date string
+  date: string
   mileage: number
-  type: MaintenanceType
+  type: MaintenanceType        // primary type (derived from first item or manual)
   description?: string
   partsReplaced?: string
   partsCost: number
@@ -74,6 +88,7 @@ export interface MaintenanceRecord {
   nextServiceMileage?: number
   createdAt: string
   updatedAt: string
+  items?: MaintenanceItem[]   // line items breakdown
 }
 
 // ─── Reminder ─────────────────────────────────────────────────────────────────
@@ -101,7 +116,7 @@ export interface AppSettings {
 // ─── Stats ────────────────────────────────────────────────────────────────────
 
 export interface CostStat {
-  month: string // "Aug 2026"
+  month: string
   total: number
 }
 

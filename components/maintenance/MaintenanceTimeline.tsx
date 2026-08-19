@@ -1,6 +1,7 @@
 'use client'
 
-import { Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import type { MaintenanceRecord } from '@/types'
 import { MAINTENANCE_TYPE_LABELS } from '@/types'
 import { formatCurrency, formatDate, formatMileage } from '@/lib/utils'
@@ -26,7 +27,6 @@ export default function MaintenanceTimeline({
     )
   }
 
-  // Group by month
   const grouped = groupByMonth(records)
 
   return (
@@ -61,58 +61,123 @@ function RecordCard({
   currency: string
   onDelete?: (id: string) => void
 }) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 p-3.5 flex items-start gap-3">
-      {/* Left timeline dot */}
-      <div className="mt-1 w-2 h-2 rounded-full bg-gray-300 shrink-0" />
+  const [expanded, setExpanded] = useState(false)
+  const hasItems = record.items && record.items.length > 0
+  const multiItem = hasItems && record.items!.length > 1
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-gray-900">
-              {MAINTENANCE_TYPE_LABELS[record.type]}
-            </p>
-            {record.description && (
-              <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{record.description}</p>
+  // Title: show all item types if multi-item
+  const title = hasItems
+    ? record.items!.map((i) => MAINTENANCE_TYPE_LABELS[i.type as keyof typeof MAINTENANCE_TYPE_LABELS]).join(' · ')
+    : MAINTENANCE_TYPE_LABELS[record.type]
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      {/* Main row */}
+      <div className="flex items-start gap-3 p-3.5">
+        <div className="mt-1 w-2 h-2 rounded-full bg-gray-300 shrink-0" />
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2">
+                {title}
+              </p>
+              {!hasItems && record.description && (
+                <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{record.description}</p>
+              )}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <p className="text-sm font-semibold text-gray-900">
+                {formatCurrency(record.totalCost, currency)}
+              </p>
+              {multiItem && (
+                <button
+                  onClick={() => setExpanded((v) => !v)}
+                  className="p-1 rounded-lg text-gray-400 hover:bg-gray-50 transition-colors"
+                  aria-label={expanded ? 'Collapse' : 'Expand'}
+                >
+                  {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+            <span className="text-xs text-gray-400">{formatDate(record.date)}</span>
+            <span className="text-xs text-gray-300">·</span>
+            <span className="text-xs text-gray-400">{formatMileage(record.mileage)}</span>
+            {record.workshop && (
+              <>
+                <span className="text-xs text-gray-300">·</span>
+                <span className="text-xs text-gray-400 truncate">{record.workshop}</span>
+              </>
+            )}
+            {hasItems && (
+              <>
+                <span className="text-xs text-gray-300">·</span>
+                <span className="text-xs text-gray-400">{record.items!.length} service{record.items!.length > 1 ? 's' : ''}</span>
+              </>
             )}
           </div>
-          <p className="text-sm font-semibold text-gray-900 shrink-0">
-            {formatCurrency(record.totalCost, currency)}
-          </p>
-        </div>
 
-        <div className="flex items-center gap-3 mt-1.5">
-          <span className="text-xs text-gray-400">{formatDate(record.date)}</span>
-          <span className="text-xs text-gray-300">·</span>
-          <span className="text-xs text-gray-400">{formatMileage(record.mileage)}</span>
-          {record.workshop && (
-            <>
-              <span className="text-xs text-gray-300">·</span>
-              <span className="text-xs text-gray-400 truncate">{record.workshop}</span>
-            </>
+          {(record.nextServiceDate || record.nextServiceMileage) && (
+            <div className="mt-2 flex items-center gap-1.5 text-xs text-gray-400">
+              <span className="text-gray-300">Next:</span>
+              {record.nextServiceMileage && <span>{formatMileage(record.nextServiceMileage)}</span>}
+              {record.nextServiceDate && record.nextServiceMileage && <span>or</span>}
+              {record.nextServiceDate && <span>{formatDate(record.nextServiceDate)}</span>}
+            </div>
           )}
         </div>
 
-        {(record.nextServiceDate || record.nextServiceMileage) && (
-          <div className="mt-2 flex items-center gap-1.5 text-xs text-gray-400">
-            <span className="text-gray-300">Next:</span>
-            {record.nextServiceMileage && (
-              <span>{formatMileage(record.nextServiceMileage)}</span>
-            )}
-            {record.nextServiceDate && record.nextServiceMileage && <span>or</span>}
-            {record.nextServiceDate && <span>{formatDate(record.nextServiceDate)}</span>}
-          </div>
+        {onDelete && (
+          <button
+            onClick={() => onDelete(record.id)}
+            className="p-1.5 rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors shrink-0"
+            aria-label="Delete record"
+          >
+            <Trash2 size={14} />
+          </button>
         )}
       </div>
 
-      {onDelete && (
-        <button
-          onClick={() => onDelete(record.id)}
-          className="p-1.5 rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-50 transition-colors shrink-0"
-          aria-label="Delete record"
-        >
-          <Trash2 size={14} />
-        </button>
+      {/* Expanded items breakdown */}
+      {hasItems && (expanded || !multiItem) && (
+        <div className="border-t border-gray-50 px-3.5 pb-3 pt-2 space-y-1.5">
+          {record.items!.map((item, idx) => (
+            <div key={idx} className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-200 shrink-0" />
+                <span className="text-gray-600 font-medium">
+                  {MAINTENANCE_TYPE_LABELS[item.type as keyof typeof MAINTENANCE_TYPE_LABELS]}
+                </span>
+                {item.description && (
+                  <span className="text-gray-400 truncate">— {item.description}</span>
+                )}
+              </div>
+              <div className="flex items-center gap-3 shrink-0 ml-2 text-gray-500">
+                {item.partsCost > 0 && (
+                  <span>Parts: {formatCurrency(item.partsCost, currency)}</span>
+                )}
+                {item.laborCost > 0 && (
+                  <span>Labor: {formatCurrency(item.laborCost, currency)}</span>
+                )}
+                <span className="font-semibold text-gray-700">
+                  {formatCurrency(item.totalCost, currency)}
+                </span>
+              </div>
+            </div>
+          ))}
+          {/* Total row */}
+          {multiItem && (
+            <div className="flex items-center justify-between text-xs border-t border-gray-100 pt-1.5 mt-1.5">
+              <span className="text-gray-400 font-medium">Total</span>
+              <span className="font-bold text-gray-900">
+                {formatCurrency(record.totalCost, currency)}
+              </span>
+            </div>
+          )}
+        </div>
       )}
     </div>
   )

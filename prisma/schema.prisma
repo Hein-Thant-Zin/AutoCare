@@ -106,4 +106,17 @@ model MaintenanceRecord {
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  items   MaintenanceItem[]
+}
+
+model MaintenanceItem {
+  id          String  @id @default(cuid())
+  recordId    String
+  type        String
+  description String?
+  partsCost   Float   @default(0)
+  laborCost   Float   @default(0)
+  totalCost   Float   @default(0)
+
+  record MaintenanceRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
 }
