@@ -35,6 +35,6 @@ export const config = {
      * - login (public login page)
      * - Static public files (icons, manifest, sw, favicon)
      */
-    '/((?!_next|api/auth|login|icons|manifest\\.json|sw\\.js|favicon\\.ico).*)',
+    '/((?!_next|api/auth|api/debug-env|login|icons|manifest\\.json|sw\\.js|favicon\\.ico).*)',
   ],
 }
