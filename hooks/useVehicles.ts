@@ -4,6 +4,7 @@ import { useCallback } from 'react'
 import useSWR, { mutate as globalMutate } from 'swr'
 import type { Vehicle } from '@/types'
 import type { VehicleFormValues } from '@/lib/validations'
+import { swrConfig } from '@/lib/swr'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
@@ -15,10 +16,7 @@ export function useVehicles(adminUserId?: string) {
   const { data, isLoading, error, mutate } = useSWR<Vehicle[] | { vehicles: Vehicle[] }>(
     url,
     fetcher,
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 5000, // don't re-fetch if called within 5s
-    }
+    swrConfig
   )
 
   const vehicles: Vehicle[] = adminUserId

@@ -4,6 +4,7 @@ import { useCallback } from 'react'
 import useSWR from 'swr'
 import type { MaintenanceRecord } from '@/types'
 import type { MaintenanceFormValues } from '@/lib/validations'
+import { swrConfig } from '@/lib/swr'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
@@ -16,10 +17,7 @@ export function useMaintenance(vehicleId?: string, adminUserId?: string) {
 
   const { data, isLoading, error, mutate } = useSWR<
     MaintenanceRecord[] | { maintenanceRecords: MaintenanceRecord[] }
-  >(url, fetcher, {
-    revalidateOnFocus: false,
-    dedupingInterval: 5000,
-  })
+  >(url, fetcher, swrConfig)
 
   const records: MaintenanceRecord[] = adminUserId
     ? ((data as { maintenanceRecords: MaintenanceRecord[] })?.maintenanceRecords ?? [])
