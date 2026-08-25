@@ -1,9 +1,34 @@
 'use client'
 
-import { signIn } from 'next-auth/react'
+import { Suspense, useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { signIn, useSession } from 'next-auth/react'
 import Image from 'next/image'
+import { Loader2 } from 'lucide-react'
 
-export default function LoginPage() {
+/** Only allow same-origin relative paths (prevents open redirects) */
+function safeCallbackUrl(url: string | null): string {
+  if (!url || !url.startsWith('/') || url.startsWith('//')) return '/'
+  return url
+}
+
+function LoginContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { data: session, status } = useSession()
+  const [signingIn, setSigningIn] = useState(false)
+  const callbackUrl = safeCallbackUrl(searchParams.get('callbackUrl'))
+
+  // Already signed in? Skip the login form entirely.
+  useEffect(() => {
+    if (session && status === 'authenticated') router.replace(callbackUrl)
+  }, [session, status, callbackUrl, router])
+
+  const handleSignIn = () => {
+    setSigningIn(true)
+    signIn('google', { callbackUrl })
+  }
+
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm">
@@ -35,11 +60,21 @@ export default function LoginPage() {
           </p>
 
           <button
-            onClick={() => signIn('google', { callbackUrl: '/' })}
-            className="w-full flex items-center justify-center gap-3 py-3.5 px-5 bg-white border border-[#E5E8EB] rounded-xl text-sm font-semibold text-[#20252B] hover:bg-[#F8F9FA] hover:border-[#20252B] transition-all active:scale-[0.98]"
+            onClick={handleSignIn}
+            disabled={signingIn || status === 'loading'}
+            className="w-full flex items-center justify-center gap-3 py-3.5 px-5 bg-white border border-[#E5E8EB] rounded-xl text-sm font-semibold text-[#20252B] hover:bg-[#F8F9FA] hover:border-[#20252B] transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
           >
-            <GoogleIcon />
-            Continue with Google
+            {signingIn ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Redirecting to Google…
+              </>
+            ) : (
+              <>
+                <GoogleIcon />
+                Continue with Google
+              </>
+            )}
           </button>
 
           <p className="text-[10px] text-[#B0B8C2] text-center mt-5 leading-relaxed">
@@ -48,6 +83,20 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
+          <div className="w-20 h-20 rounded-2xl bg-white border border-[#E5E8EB] animate-pulse" />
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   )
 }
 

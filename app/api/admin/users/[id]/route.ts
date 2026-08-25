@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { authOptions } from '@/lib/auth'
+import { serializeDecimals } from '@/lib/serialize'
 
 type Params = { params: { id: string } }
 
@@ -19,7 +20,7 @@ export async function GET(_: Request, { params }: Params) {
     },
   })
   if (!user) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  return NextResponse.json(user)
+  return NextResponse.json(serializeDecimals(user))
 }
 
 // PATCH /api/admin/users/[id] — promote/demote role

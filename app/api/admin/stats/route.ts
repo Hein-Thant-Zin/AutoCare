@@ -20,6 +20,6 @@ export async function GET() {
     totalUsers,
     totalVehicles,
     totalRecords,
-    totalCost: totalCostAgg._sum.totalCost ?? 0,
+    totalCost: Number(totalCostAgg._sum.totalCost ?? 0),
   })
 }

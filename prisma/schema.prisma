@@ -48,13 +48,18 @@ model VerificationToken {
 
 // ─── App Models ───────────────────────────────────────────────────────────────
 
+enum Role {
+  user
+  admin
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
   email         String    @unique
   emailVerified DateTime?
   image         String?
-  role          String    @default("user") // "user" | "admin"
+  role          Role      @default(user)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -74,7 +79,7 @@ model Vehicle {
   licensePlate   String
   color          String?
   currentMileage Int
-  purchaseDate   String?
+  purchaseDate   DateTime?
   notes          String?
   photo          String?
   createdAt      DateTime @default(now())
@@ -88,18 +93,18 @@ model MaintenanceRecord {
   id                 String   @id @default(cuid())
   userId             String
   vehicleId          String
-  date               String
+  date               DateTime
   mileage            Int
   type               String
   description        String?
   partsReplaced      String?
-  partsCost          Float    @default(0)
-  laborCost          Float    @default(0)
-  totalCost          Float    @default(0)
+  partsCost          Decimal  @default(0) @db.Decimal(14, 2)
+  laborCost          Decimal  @default(0) @db.Decimal(14, 2)
+  totalCost          Decimal  @default(0) @db.Decimal(14, 2)
   workshop           String?
   notes              String?
   receiptPhoto       String?
-  nextServiceDate    String?
+  nextServiceDate    DateTime?
   nextServiceMileage Int?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -114,9 +119,9 @@ model MaintenanceItem {
   recordId    String
   type        String
   description String?
-  partsCost   Float   @default(0)
-  laborCost   Float   @default(0)
-  totalCost   Float   @default(0)
+  partsCost   Decimal @default(0) @db.Decimal(14, 2)
+  laborCost   Decimal @default(0) @db.Decimal(14, 2)
+  totalCost   Decimal @default(0) @db.Decimal(14, 2)
 
   record MaintenanceRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
 }

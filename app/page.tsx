@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useSession } from 'next-auth/react'
 import { Plus, TrendingUp, AlertTriangle, Clock, Car } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
 import Header from '@/components/layout/Header'
 import PageSkeleton from '@/components/layout/PageSkeleton'
 import PageShell from '@/components/layout/PageShell'
+import WelcomeScreen from '@/components/WelcomeScreen'
 import { useVehicles } from '@/hooks/useVehicles'
 import { useMaintenance } from '@/hooks/useMaintenance'
 import { useSettings } from '@/hooks/useSettings'
@@ -21,7 +23,15 @@ import {
 } from '@/lib/utils'
 import { MAINTENANCE_TYPE_LABELS } from '@/types'
 
-export default function DashboardPage() {
+export default function HomePage() {
+  const { status } = useSession()
+
+  if (status === 'loading') return <PageSkeleton />
+  if (status === 'unauthenticated') return <WelcomeScreen />
+  return <DashboardPage />
+}
+
+function DashboardPage() {
   const { vehicles } = useVehicles()
   const { records } = useMaintenance()
   const { settings } = useSettings()

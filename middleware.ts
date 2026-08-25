@@ -15,7 +15,10 @@ export default withAuth(
   },
   {
     callbacks: {
-      authorized({ token }) {
+      authorized({ token, req }) {
+        // `/` is public — guests get the welcome screen, signed-in users get the dashboard
+        const { pathname } = new URL(req.url)
+        if (pathname === '/') return true
         return !!token
       },
     },
@@ -35,6 +38,6 @@ export const config = {
      * - login (public login page)
      * - Static public files (icons, manifest, sw, favicon)
      */
-    '/((?!_next|api/auth|api/debug-env|login|icons|manifest\\.json|sw\\.js|favicon\\.ico).*)',
+    '/((?!_next|api/auth|login|icons|manifest\\.json|sw\\.js|favicon\\.ico).*)',
   ],
 }

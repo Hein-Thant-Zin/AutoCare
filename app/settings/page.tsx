@@ -6,7 +6,6 @@ import Header from '@/components/layout/Header'
 import PageSkeleton from '@/components/layout/PageSkeleton'
 import PageShell from '@/components/layout/PageShell'
 import { useSettings } from '@/hooks/useSettings'
-import { clearAllData, exportData, importData } from '@/lib/storage'
 import { cn } from '@/lib/utils'
 
 export default function SettingsPage() {
@@ -20,24 +19,43 @@ export default function SettingsPage() {
   useEffect(() => setMounted(true), [])
   if (!mounted) return <PageSkeleton />
 
-  const handleExport = () => {
-    const data = exportData()
-    const blob = new Blob([data], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `autocare-backup-${new Date().toISOString().split('T')[0]}.json`
-    a.click()
-    URL.revokeObjectURL(url)
+  const handleExport = async () => {
+    try {
+      const [vehiclesRes, maintenanceRes] = await Promise.all([
+        fetch('/api/vehicles'),
+        fetch('/api/maintenance'),
+      ])
+      if (!vehiclesRes.ok || !maintenanceRes.ok) throw new Error()
+      const [vehicles, maintenance] = await Promise.all([
+        vehiclesRes.json(),
+        maintenanceRes.json(),
+      ])
+      const data = JSON.stringify({ vehicles, maintenance, exportedAt: new Date().toISOString() }, null, 2)
+      const blob = new Blob([data], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `autocare-backup-${new Date().toISOString().split('T')[0]}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      setImportError('Export failed. Please try again.')
+    }
   }
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       try {
-        importData(ev.target?.result as string)
+        const payload = JSON.parse(ev.target?.result as string)
+        const res = await fetch('/api/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        if (!res.ok) throw new Error()
         setImportSuccess(true)
         setImportError('')
         setTimeout(() => setImportSuccess(false), 3000)
@@ -48,12 +66,12 @@ export default function SettingsPage() {
     reader.readAsText(file)
   }
 
-  const handleClearData = () => {
+  const handleClearData = async () => {
     if (!confirmClear) {
       setConfirmClear(true)
       return
     }
-    clearAllData()
+    await fetch('/api/vehicles', { method: 'DELETE' })
     setConfirmClear(false)
     window.location.reload()
   }
@@ -159,7 +177,7 @@ export default function SettingsPage() {
           <div className="bg-white rounded-xl border border-gray-100 px-4 py-3 space-y-1">
             <InfoRow label="App" value="AutoCare" />
             <InfoRow label="Version" value="1.0.0" />
-            <InfoRow label="Storage" value="Local (offline-first)" />
+            <InfoRow label="Storage" value="Cloud (PostgreSQL)" />
           </div>
         </Section>
       </PageShell>

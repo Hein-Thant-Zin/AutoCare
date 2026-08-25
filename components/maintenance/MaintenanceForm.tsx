@@ -7,7 +7,6 @@ import { Camera, Plus, Trash2 } from 'lucide-react'
 import { maintenanceSchema, MAINTENANCE_TYPE_VALUES, type MaintenanceFormValues } from '@/lib/validations'
 import { MAINTENANCE_TYPE_LABELS } from '@/types'
 import { cn, todayISO, formatCurrency } from '@/lib/utils'
-import { getWorkshops } from '@/lib/storage'
 import type { Vehicle } from '@/types'
 
 // ─── Line Item ────────────────────────────────────────────────────────────────
@@ -52,7 +51,14 @@ export default function MaintenanceForm({
   const [lineItems, setLineItems] = useState<LineItem[]>([emptyItem()])
   const fileRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => { setWorkshops(getWorkshops()) }, [])
+  useEffect(() => {
+    fetch('/api/maintenance')
+      .then((r) => (r.ok ? r.json() : []))
+      .then((records: { workshop?: string }[]) =>
+        setWorkshops(Array.from(new Set(records.map((r) => r.workshop).filter(Boolean) as string[])))
+      )
+      .catch(() => {})
+  }, [])
 
   const {
     register,

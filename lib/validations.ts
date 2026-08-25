@@ -1,5 +1,19 @@
 import { z } from 'zod'
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Treats '' / null as undefined so cleared optional fields don't store junk */
+const optionalString = z.preprocess(
+  (v) => (v === '' || v == null ? undefined : v),
+  z.string().optional()
+)
+
+/** Treats '' / null as undefined so empty number inputs don't coerce to 0 */
+const optionalNumber = z.preprocess(
+  (v) => (v === '' || v == null ? undefined : v),
+  z.coerce.number().optional()
+)
+
 // ─── Vehicle Schema ───────────────────────────────────────────────────────────
 
 export const vehicleSchema = z.object({
@@ -10,7 +24,7 @@ export const vehicleSchema = z.object({
   licensePlate: z.string().min(1, 'License plate is required'),
   color: z.string().optional(),
   currentMileage: z.coerce.number().min(0, 'Mileage must be 0 or more'),
-  purchaseDate: z.string().optional(),
+  purchaseDate: optionalString,
   notes: z.string().optional(),
   photo: z.string().optional(),
 })
@@ -49,9 +63,12 @@ export type MaintenanceItemValues = z.infer<typeof maintenanceItemSchema>
 
 export const maintenanceSchema = z.object({
   vehicleId: z.string().min(1, 'Vehicle is required'),
-  date: z.string().min(1, 'Date is required'),
+  date: z
+    .string()
+    .min(1, 'Date is required')
+    .refine((s) => !isNaN(new Date(s).getTime()), 'Invalid date'),
   mileage: z.coerce.number().min(0, 'Mileage must be 0 or more'),
-  // Legacy single-item fields (kept for backwards compatibility)
+  // Legacy single-item fields (kept for backwards compatibility with old backups)
   type: z.enum(MAINTENANCE_TYPE_VALUES).optional(),
   description: z.string().optional(),
   partsReplaced: z.string().optional(),
@@ -61,8 +78,8 @@ export const maintenanceSchema = z.object({
   workshop: z.string().optional(),
   notes: z.string().optional(),
   receiptPhoto: z.string().optional(),
-  nextServiceDate: z.string().optional(),
-  nextServiceMileage: z.coerce.number().optional(),
+  nextServiceDate: optionalString,
+  nextServiceMileage: optionalNumber,
   // Multi-item line items
   items: z.array(maintenanceItemSchema).min(1, 'At least one service item is required').optional(),
 })

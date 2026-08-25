@@ -56,7 +56,7 @@ export default function EditVehiclePage() {
             licensePlate: vehicle.licensePlate,
             color: vehicle.color,
             currentMileage: vehicle.currentMileage,
-            purchaseDate: vehicle.purchaseDate,
+            purchaseDate: vehicle.purchaseDate?.split('T')[0],
             notes: vehicle.notes,
             photo: vehicle.photo,
           }}

@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { authOptions } from '@/lib/auth'
 import { vehicleSchema } from '@/lib/validations'
+import { normalizeVehicleData } from '@/lib/records'
 
 type Params = { params: { id: string } }
 
@@ -35,7 +36,7 @@ export async function PATCH(req: Request, { params }: Params) {
 
   const vehicle = await prisma.vehicle.update({
     where: { id: params.id },
-    data: parsed.data,
+    data: normalizeVehicleData(parsed.data),
   })
   return NextResponse.json(vehicle)
 }
