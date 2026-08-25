@@ -1,6 +1,7 @@
 'use client'
 
 import { Suspense, useState } from 'react'
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import BottomNav from '@/components/layout/BottomNav'
 import Header from '@/components/layout/Header'
@@ -41,9 +42,9 @@ function NewMaintenanceContent() {
         <p className="text-3xl mb-3">🚗</p>
         <p className="text-sm font-semibold text-gray-700">No vehicles found</p>
         <p className="text-xs text-gray-400 mt-1 mb-4">Add a vehicle first before recording maintenance</p>
-        <a href="/vehicles/new" className="text-sm font-medium text-gray-900 underline">
+        <Link href="/vehicles/new" className="text-sm font-medium text-gray-900 underline">
           Add a vehicle →
-        </a>
+        </Link>
       </div>
     )
   }

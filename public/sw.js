@@ -1,4 +1,4 @@
-const CACHE_NAME = 'autocare-v2'
+const CACHE_NAME = 'autocare-v3'
 const STATIC_ASSETS = [
   '/manifest.json',
 ]
@@ -15,6 +15,16 @@ const BYPASS_PATTERNS = [
 function shouldBypass(url) {
   const { pathname } = new URL(url)
   return BYPASS_PATTERNS.some((p) => pathname.startsWith(p))
+}
+
+// Next.js client-navigation payload fetches (RSC/prefetch) go to page URLs
+// with special headers — they must always hit the network, never the cache.
+function isNextNavigation(request) {
+  return (
+    request.headers.get('RSC') === '1' ||
+    request.headers.get('Next-Router-Prefetch') === '1' ||
+    request.headers.get('Next-Router-State-Tree') !== null
+  )
 }
 
 // Install
@@ -43,8 +53,9 @@ self.addEventListener('fetch', (event) => {
   // Only handle GET from same origin
   if (request.method !== 'GET' || url.origin !== location.origin) return
 
-  // Bypass auth, API, and navigation routes entirely — let browser handle them
+  // Bypass auth, API, navigation routes, and Next.js RSC payloads entirely
   if (shouldBypass(request.url)) return
+  if (isNextNavigation(request)) return
 
   // For navigation requests (HTML pages) — always go to network
   if (request.mode === 'navigate') return
