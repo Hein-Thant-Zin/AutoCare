@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { Plus, TrendingUp, AlertTriangle, Clock, Car } from 'lucide-react'
@@ -32,12 +32,9 @@ export default function HomePage() {
 }
 
 function DashboardPage() {
-  const { vehicles } = useVehicles()
-  const { records } = useMaintenance()
+  const { vehicles, loading: vehiclesLoading } = useVehicles()
+  const { records, loading: recordsLoading } = useMaintenance()
   const { settings } = useSettings()
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => setMounted(true), [])
 
   const reminders = useMemo(() => {
     return vehicles.map((v) => {
@@ -55,7 +52,7 @@ function DashboardPage() {
   const monthCost = useMemo(() => currentMonthCost(records), [records])
   const recentRecords = records.slice(0, 5)
 
-  if (!mounted) return <PageSkeleton />
+  if (vehiclesLoading || recordsLoading) return <PageSkeleton />
 
   return (
     <>

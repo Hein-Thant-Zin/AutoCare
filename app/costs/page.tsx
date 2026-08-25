@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import BottomNav from '@/components/layout/BottomNav'
 import Header from '@/components/layout/Header'
 import PageShell from '@/components/layout/PageShell'
@@ -27,12 +26,9 @@ export default function CostsPage() {
   const { records, loading } = useMaintenance()
   const { vehicles } = useVehicles()
   const { settings } = useSettings()
-  const [mounted, setMounted] = useState(false)
 
-  useEffect(() => setMounted(true), [])
-
-  // Show skeleton while loading instead of blank screen
-  if (!mounted || loading) {
+  // Show skeleton only on first load (no cached data yet)
+  if (loading) {
     return (
       <>
         <Header title="Cost Tracking" />

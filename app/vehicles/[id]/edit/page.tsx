@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import BottomNav from '@/components/layout/BottomNav'
 import Header from '@/components/layout/Header'
@@ -15,15 +15,12 @@ export default function EditVehiclePage() {
   const id = params.id as string
 
   const { vehicles, editVehicle, loading } = useVehicles()
-  const [mounted, setMounted] = useState(false)
   const [saving, setSaving] = useState(false)
-
-  useEffect(() => setMounted(true), [])
 
   const vehicle = useMemo(() => vehicles.find((v) => v.id === id), [vehicles, id])
 
-  if (!mounted) return null
-  if (!loading && !vehicle) {
+  if (!vehicle) {
+    if (loading) return null
     return (
       <>
         <Header title="Not Found" showBack />
@@ -34,7 +31,6 @@ export default function EditVehiclePage() {
       </>
     )
   }
-  if (!vehicle) return null
 
   const handleSubmit = async (values: VehicleFormValues) => {
     setSaving(true)

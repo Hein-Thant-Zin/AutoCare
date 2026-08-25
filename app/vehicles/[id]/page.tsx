@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Edit2, Plus, Trash2 } from 'lucide-react'
@@ -29,15 +29,12 @@ export default function VehicleDetailPage() {
   const { vehicles, removeVehicle, loading: vLoading } = useVehicles()
   const { records, removeRecord } = useMaintenance(id)
   const { settings } = useSettings()
-  const [mounted, setMounted] = useState(false)
   const [confirming, setConfirming] = useState(false)
-
-  useEffect(() => setMounted(true), [])
 
   const vehicle = useMemo(() => vehicles.find((v) => v.id === id), [vehicles, id])
 
-  if (!mounted) return null
-  if (!vLoading && !vehicle) {
+  if (!vehicle) {
+    if (vLoading) return null
     return (
       <>
         <Header title="Not Found" showBack />

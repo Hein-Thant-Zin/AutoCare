@@ -1,23 +1,18 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import BottomNav from '@/components/layout/BottomNav'
 import Header from '@/components/layout/Header'
-import PageSkeleton from '@/components/layout/PageSkeleton'
 import PageShell from '@/components/layout/PageShell'
 import { useSettings } from '@/hooks/useSettings'
 import { cn } from '@/lib/utils'
 
 export default function SettingsPage() {
   const { settings, updateSettings } = useSettings()
-  const [mounted, setMounted] = useState(false)
   const [confirmClear, setConfirmClear] = useState(false)
   const [importError, setImportError] = useState('')
   const [importSuccess, setImportSuccess] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => setMounted(true), [])
-  if (!mounted) return <PageSkeleton />
 
   const handleExport = async () => {
     try {

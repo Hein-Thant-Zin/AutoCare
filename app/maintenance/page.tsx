@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Plus, Search, X } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
@@ -19,13 +19,9 @@ export default function MaintenancePage() {
   const { records, loading, removeRecord } = useMaintenance()
   const { vehicles } = useVehicles()
   const { settings } = useSettings()
-  const [mounted, setMounted] = useState(false)
-
   const [search, setSearch] = useState('')
   const [filterVehicle, setFilterVehicle] = useState('')
   const [filterType, setFilterType] = useState<MaintenanceType | ''>('')
-
-  useEffect(() => setMounted(true), [])
 
   const filtered = useMemo(() => {
     return records.filter((r) => {
@@ -48,8 +44,7 @@ export default function MaintenancePage() {
 
   const hasFilters = !!search || !!filterVehicle || !!filterType
 
-  if (!mounted) return <PageSkeleton />
-
+  if (loading) return <PageSkeleton />
 
   return (
     <>

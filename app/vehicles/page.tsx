@@ -1,11 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import BottomNav from '@/components/layout/BottomNav'
 import Header from '@/components/layout/Header'
-import PageSkeleton from '@/components/layout/PageSkeleton'
 import PageShell from '@/components/layout/PageShell'
 import VehicleCard from '@/components/vehicles/VehicleCard'
 import { useVehicles } from '@/hooks/useVehicles'
@@ -14,10 +12,6 @@ import { useMaintenance } from '@/hooks/useMaintenance'
 export default function VehiclesPage() {
   const { vehicles, loading } = useVehicles()
   const { records } = useMaintenance()
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => setMounted(true), [])
-  if (!mounted) return <PageSkeleton />
 
   return (
     <>
