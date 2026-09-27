@@ -188,12 +188,18 @@ function RecordCard({
 function groupByMonth(
   records: MaintenanceRecord[]
 ): { monthLabel: string; items: MaintenanceRecord[] }[] {
-  const map = new Map<string, MaintenanceRecord[]>()
+  // Use YYYY-MM as map key so sorting is reliable; display label separately
+  const map = new Map<string, { label: string; items: MaintenanceRecord[] }>()
   for (const r of records) {
+    if (!r.date) continue
     const d = new Date(r.date)
-    const key = d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
-    if (!map.has(key)) map.set(key, [])
-    map.get(key)!.push(r)
+    if (isNaN(d.getTime())) continue
+    const sortKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const label = d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+    if (!map.has(sortKey)) map.set(sortKey, { label, items: [] })
+    map.get(sortKey)!.items.push(r)
   }
-  return Array.from(map.entries()).map(([monthLabel, items]) => ({ monthLabel, items }))
+  return Array.from(map.entries())
+    .sort(([a], [b]) => b.localeCompare(a)) // newest month first
+    .map(([, { label, items }]) => ({ monthLabel: label, items }))
 }
