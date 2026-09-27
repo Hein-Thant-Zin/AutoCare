@@ -37,3 +37,22 @@ export async function PATCH(req: Request, { params }: Params) {
   const user = await prisma.user.update({ where: { id: params.id }, data: { role } })
   return NextResponse.json(user)
 }
+
+// DELETE /api/admin/users/[id] — permanently remove a user and all their data
+export async function DELETE(_: Request, { params }: Params) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (session.user.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  // An admin can never delete their own account — guarantees at least one admin remains
+  if (params.id === session.user.id) {
+    return NextResponse.json({ error: 'You cannot delete your own account' }, { status: 400 })
+  }
+
+  const existing = await prisma.user.findUnique({ where: { id: params.id }, select: { id: true } })
+  if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  // Vehicles, maintenance records, accounts and sessions cascade via schema relations
+  await prisma.user.delete({ where: { id: params.id } })
+  return NextResponse.json({ success: true })
+}

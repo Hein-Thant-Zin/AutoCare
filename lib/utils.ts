@@ -43,7 +43,9 @@ export function todayISO(): string {
 }
 
 export function monthKey(dateStr: string): string {
+  if (!dateStr) return '—'
   const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return '—'
   return d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
 }
 
@@ -118,15 +120,25 @@ export function generateId(): string {
 export function groupCostsByMonth(
   records: MaintenanceRecord[]
 ): { month: string; total: number }[] {
-  const map = new Map<string, number>()
+  // Use YYYY-MM as sort key to avoid "Invalid Date" from locale strings
+  const map = new Map<string, { label: string; total: number }>()
   for (const r of records) {
-    const key = monthKey(r.date)
-    map.set(key, (map.get(key) ?? 0) + r.totalCost)
+    if (!r.date) continue
+    const d = new Date(r.date)
+    if (isNaN(d.getTime())) continue
+    const sortKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const label = d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+    const existing = map.get(sortKey)
+    if (existing) {
+      existing.total += r.totalCost
+    } else {
+      map.set(sortKey, { label, total: r.totalCost })
+    }
   }
   return Array.from(map.entries())
-    .map(([month, total]) => ({ month, total }))
-    .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime())
+    .sort(([a], [b]) => a.localeCompare(b)) // "2026-08" vs "2026-09" — always valid
     .slice(-6)
+    .map(([, { label, total }]) => ({ month: label, total }))
 }
 
 export function currentMonthCost(records: MaintenanceRecord[]): number {
