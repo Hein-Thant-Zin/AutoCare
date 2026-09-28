@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { authOptions } from '@/lib/auth'
 import { vehicleSchema } from '@/lib/validations'
 import { normalizeVehicleData } from '@/lib/records'
+import { serializeDecimals } from '@/lib/serialize'
 
 // GET /api/vehicles — list current user's vehicles
 export async function GET() {
@@ -14,7 +15,7 @@ export async function GET() {
     where: { userId: session.user.id },
     orderBy: { createdAt: 'desc' },
   })
-  return NextResponse.json(vehicles)
+  return NextResponse.json(serializeDecimals(vehicles))
 }
 
 // POST /api/vehicles — create a new vehicle
@@ -29,7 +30,7 @@ export async function POST(req: Request) {
   const vehicle = await prisma.vehicle.create({
     data: { ...normalizeVehicleData(parsed.data), userId: session.user.id },
   })
-  return NextResponse.json(vehicle, { status: 201 })
+  return NextResponse.json(serializeDecimals(vehicle), { status: 201 })
 }
 
 // DELETE /api/vehicles — delete all current user's vehicles (records cascade)
